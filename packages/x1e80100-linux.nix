@@ -19,15 +19,16 @@ linuxPackagesFor (buildLinux {
   defconfig = "johan_defconfig";
 
   structuredExtraConfig = with lib.kernel; {
-    VIRTUALIZATION = yes;
-    KVM = yes;
+    #VIRTUALIZATION = yes;
+    #KVM = yes;
     MAGIC_SYSRQ = yes;
-    EC_LENOVO_YOGA_SLIM7X = module;
+    #EC_LENOVO_YOGA_SLIM7X = module;
   };
 
   # TODO: Look into the errors and remove this.
   ignoreConfigErrors = true;
 
+  /*
   kernelPatches = [
     {
       name = "Add Bluetooth support for the Lenovo Yoga Slim 7x";
@@ -77,4 +78,5 @@ linuxPackagesFor (buildLinux {
       patch = ./lenovo-yoga-slim7x-dp-altmode.patch;
     }
   ];
+  */
 })
