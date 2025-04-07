@@ -4,6 +4,7 @@
   boot.initrd.includeDefaultModules = false;
   boot.initrd.systemd.tpm2.enable = false; # This also pulls in some modules our kernel is not build with.
   boot.initrd.availableKernelModules = [
+        /*
     "q6apm_lpass_dais"
 "q6prm_clocks"
 "q6apm_dai"
@@ -13,7 +14,7 @@
 "snd_soc_wcd938x"
 "qcom_spmi_temp_alarm"
 "pm8941_pwrkey"
-    #"iris"
+#"iris"
 "snd_soc_x1e80100"
 "soundwire_qcom"
 "snd_soc_lpass_wsa_macro"
@@ -38,7 +39,7 @@
 "i2c_qcom_geni"
 "pinctrl_sm8550_lpass_lpi"
 "pinctrl_lpass_lpi"
-"dispcc_x1e80100"
+        #"dispcc_x1e80100"
 "videocc_sm8550"
 "phy_qcom_edp"
 "lpasscc_sc8280xp"
@@ -57,29 +58,37 @@
     "phy_qcom_qmp_combo"
     "phy_qcom_snps_eusb2"
     "phy_qcom_eusb2_repeater"
-    "tcsrcc_x1e80100"
+        #"tcsrcc_x1e80100"
 
     "i2c_hid_of"
     "i2c_qcom_geni"
-    "dispcc-x1e80100"
-    "gpucc-x1e80100"
+        #"dispcc-x1e80100"
+        #"gpucc-x1e80100"
     "phy_qcom_edp"
     "panel_edp"
     "msm"
     "nvme"
     "phy_qcom_qmp_pcie"
     #"pcie_qcom"
-    "panel_samsung_atna33xc20"
+        #"panel_samsung_atna33xc20"
 
     # Needed with the DP altmode patches
     "ps883x"
     "pmic_glink_altmode"
     "qrtr"
+        */
+    # "needed" to boot?
+    "nvme" "tcsrcc_x1e80100" "phy_qcom_qmp_pcie" "pcie_qcom"
+    # Keyboard
+    "i2c_hid_of" "i2c_qcom_geni"
   ];
+
 
   boot.kernelParams = [
     "pd_ignore_unused"
     "clk_ignore_unused"
+    "regulator_ignore_unused"
+    "mem=31G"
 
     # Needed since 4c3d9c134892c4158867075c840b81a5ed28af1f ("arm64: dts: qcom:
     # x1e80100: Add debug uart to Lenovo Yoga Slim 7x"), I guess systemd picks
