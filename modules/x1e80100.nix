@@ -36,14 +36,10 @@
     # Needed since 4c3d9c134892c4158867075c840b81a5ed28af1f ("arm64: dts: qcom:
     # x1e80100: Add debug uart to Lenovo Yoga Slim 7x"), I guess systemd picks
     # UART as the only console, and it does not output logs on the screen.
-    "console=tty1"
+    # "console=tty1"
   ];
 
   hardware.deviceTree.enable = true;
-
-  hardware.firmware = [
-    pkgs.x1e80100-lenovo-yoga-slim7x-firmware
-  ];
 
   boot.kernelPackages = pkgs.x1e80100-linux;
 }

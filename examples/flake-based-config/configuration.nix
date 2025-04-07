@@ -20,12 +20,13 @@
 
   fileSystems = {
     "/" = {
-      device = "/dev/disk/by-label/root";
+      device = "/dev/disk/by-label/nixos";
       fsType = "ext4";
     };
-    "/boot" = {
-      device = "/dev/disk/by-label/SYSTEM_DRV";
+    "/boot" =
+    { device = "/dev/disk/by-uuid/02AF-B1F4";
       fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
     };
   };
 
