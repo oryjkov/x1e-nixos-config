@@ -1,6 +1,23 @@
 { pkgs, lib, ... }:
 
 {
+  boot.initrd.extraFirmwarePaths = [
+    # Basically all of the x1e80100 modules. Avoids fw_load errors in initrd.
+    "qcom/x1e80100/gen70500_zap.mbn"
+    "qcom/x1e80100/LENOVO/21N1/cdspr.jsn"
+    "qcom/x1e80100/LENOVO/21N1/qcadsp8380.mbn"
+    "qcom/x1e80100/LENOVO/21N1/adspua.jsn"
+    "qcom/x1e80100/LENOVO/21N1/battmgr.jsn"
+    "qcom/x1e80100/LENOVO/21N1/adsps.jsn"
+    "qcom/x1e80100/LENOVO/21N1/qcdxkmsuc8380.mbn"
+    "qcom/x1e80100/LENOVO/21N1/qccdsp8380.mbn"
+    "qcom/x1e80100/LENOVO/21N1/adspr.jsn"
+    "qcom/x1e80100/LENOVO/21N1/adsp_dtbs.elf"
+    "qcom/x1e80100/LENOVO/21N1/cdsp_dtbs.elf"
+    "qcom/x1e80100/adsp.mbn"
+    "qcom/x1e80100/adsp_dtb.mbn"
+  ];
+
   boot.initrd.includeDefaultModules = false;
   boot.initrd.systemd.tpm2.enable = false; # This also pulls in some modules our kernel is not build with.
   boot.initrd.availableKernelModules = [
