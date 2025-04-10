@@ -22,7 +22,7 @@ linuxPackagesFor (buildLinux {
     VIRTUALIZATION = yes;
     KVM = yes;
     MAGIC_SYSRQ = yes;
-    #EC_LENOVO_YOGA_SLIM7X = module;
+    HZ_1000 = yes;
   };
 
   # TODO: Look into the errors and remove this.
