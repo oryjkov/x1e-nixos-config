@@ -1,6 +1,15 @@
 { pkgs, lib, ... }:
 
 {
+  boot.initrd.luks.devices = {
+    crypted = {
+      device = "/dev/disk/by-uuid/effa4c82-eaf9-4a08-93ab-fb136c24fa3b";
+      preLVM = true;
+    };
+  };
+  hardware.graphics.enable = true;
+
+  x1e.el2.enable = true;
   boot.loader.systemd-boot = {
     enable = true;
 
