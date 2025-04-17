@@ -2,41 +2,39 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
   };
-  outputs =
-    {
-      self,
-      nixpkgs,
-    }:
-    let
-      # Modify this if you are building on something other than x86_64-linux.
-      buildSystem = "x86_64-linux";
+  outputs = {
+    self,
+    nixpkgs,
+  }: let
+    # Modify this if you are building on something other than x86_64-linux.
+    buildSystem = "x86_64-linux";
 
-      nixpkgs-patched =
-        let
-          pkgs-unpatched = nixpkgs.legacyPackages.${buildSystem};
-        in
-        (pkgs-unpatched.applyPatches {
-          name = "nixpkgs-patched";
-          src = nixpkgs;
-          patches = [
-            (pkgs-unpatched.fetchpatch {
-              # nixos/iso-image: add devicetree support
-              # https://github.com/NixOS/nixpkgs/pull/396334
-              url = "https://github.com/NixOS/nixpkgs/commit/55a8b7b27b5e55f07937cc8c874917ab24093029.patch";
-              hash = "sha256-zI4zgY4sx6fWtWTEGyqSQFor3dn1GJ1eU0mdtmH2fJs=";
-            })
-            ./nixpkgs-efi-shell.patch
-          ];
-        }).overrideAttrs
-          { allowSubstitutes = true; };
-
-      pkgs-cross = import nixpkgs-patched {
-        overlays = [ (import ./packages/overlay.nix) ];
-        localSystem.system = buildSystem;
-        crossSystem.system = "aarch64-linux";
-        allowUnsupportedSystem = true;
-      };
+    nixpkgs-patched = let
+      pkgs-unpatched = nixpkgs.legacyPackages.${buildSystem};
     in
+      (pkgs-unpatched.applyPatches {
+        name = "nixpkgs-patched";
+        src = nixpkgs;
+        patches = [
+          (pkgs-unpatched.fetchpatch {
+            # nixos/iso-image: add devicetree support
+            # https://github.com/NixOS/nixpkgs/pull/396334
+            url = "https://github.com/NixOS/nixpkgs/commit/55a8b7b27b5e55f07937cc8c874917ab24093029.patch";
+            hash = "sha256-zI4zgY4sx6fWtWTEGyqSQFor3dn1GJ1eU0mdtmH2fJs=";
+          })
+          ./nixpkgs-efi-shell.patch
+        ];
+      })
+      .overrideAttrs
+      {allowSubstitutes = true;};
+
+    pkgs-cross = import nixpkgs-patched {
+      overlays = [(import ./packages/overlay.nix) (import ./packages/overlay-grub.nix)];
+      localSystem.system = buildSystem;
+      crossSystem.system = "aarch64-linux";
+      allowUnsupportedSystem = true;
+    };
+  in
     (import ./default.nix)
     // {
       nixosConfigurations = {
@@ -51,7 +49,7 @@
               hardware.lenovo-yoga-slim7x.enable = true;
 
               # Required to evaluate packages from `pkgs-cross` on the device.
-              isoImage.storeContents = [ nixpkgs-patched ];
+              isoImage.storeContents = [nixpkgs-patched];
             }
           ];
         };
@@ -61,8 +59,7 @@
             self.nixosModules.x1e
             ./modules/common.nix
             (
-              { lib, ... }:
-              {
+              {lib, ...}: {
                 nixpkgs.pkgs = nixpkgs.legacyPackages.aarch64-linux;
                 hardware.lenovo-yoga-slim7x.enable = true;
 
@@ -82,8 +79,7 @@
           "aarch64-linux"
         ];
         treefmtEval = eachSystem (
-          system:
-          let
+          system: let
             pkgs = nixpkgs.legacyPackages.${system};
             treefmt-nix = import (
               pkgs.fetchFromGitHub {
@@ -93,18 +89,16 @@
                 hash = "sha256-s4DalCDepD22jtKL5Nw6f4LP5UwoMcPzPZgHWjAfqbQ=";
               }
             );
-          in
-          (treefmt-nix.evalModule pkgs {
+          in (treefmt-nix.evalModule pkgs {
             programs.nixfmt.enable = true;
             settings.on-unmatched = "info";
             programs.mdformat = {
               enable = true;
-              package = pkgs.mdformat.withPlugins (p: [ p.mdformat-gfm ]);
+              package = pkgs.mdformat.withPlugins (p: [p.mdformat-gfm]);
             };
           })
         );
-      in
-      {
+      in {
         formatter = eachSystem (system: treefmtEval.${system}.config.build.wrapper);
         checks = eachSystem (system: {
           treefmt = treefmtEval.${system}.config.build.check self;
