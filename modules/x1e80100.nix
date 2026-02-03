@@ -19,6 +19,8 @@ in
     (lib.mkMerge (
       lib.mapAttrsToList (key: device: {
         hardware.deviceTree.name = lib.mkIf cfg.${key}.enable (lib.mkDefault device.deviceTreeName);
+        # Also set the base device tree name for el2 module
+        x1e.el2.baseDeviceTreeName = lib.mkIf cfg.${key}.enable (lib.mkDefault device.deviceTreeName);
       }) devices
     ))
 
