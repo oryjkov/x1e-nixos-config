@@ -14,7 +14,12 @@
     specialisation.el2.configuration = {
       hardware.deviceTree.name = lib.replaceString ".dtb" "-el2.dtb" config.hardware.deviceTree.name;
 
-      boot.kernelParams = [ "id_aa64mmfr0.ecv=1" ];
+      # Override kernel params to remove mem=31G limit and add EL2-specific param
+      boot.kernelParams = lib.mkForce [
+        "pd_ignore_unused"
+        "clk_ignore_unused"
+        "id_aa64mmfr0.ecv=1"
+      ];
     };
 
     boot.loader.systemd-boot.extraFiles."EFI/systemd/drivers/slbounceaa64.efi" =
