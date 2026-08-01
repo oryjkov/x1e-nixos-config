@@ -118,6 +118,20 @@ in
 
           hardware.deviceTree.enable = true;
 
+          # Mainline's t14s device tree describes no part of the WCN7850, so
+          # Bluetooth (a serdev on uart14) is missing entirely: no HCI device,
+          # nothing in rfkill. Add the nodes back from the Linaro tree. The
+          # Slim 7x needs none of this, its mainline DT already has them.
+          hardware.deviceTree.overlays = lib.mkIf cfg.lenovo-thinkpad-t14s.enable [
+            {
+              name = "t14s-wcn7850-bt";
+              # Matched as a substring of the .dtb path, not a glob. Covers the
+              # lcd/oled and el2 variants.
+              filter = "x1e78100-lenovo-thinkpad-t14s";
+              dtsFile = ./x1e78100-lenovo-thinkpad-t14s-wcn7850-bt.dts;
+            }
+          ];
+
           boot.kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
 
           boot.initrd.extraFirmwarePaths = lib.mkMerge [

@@ -1,0 +1,206 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Bluetooth for the WCN7850 combo chip on the ThinkPad T14s Gen 6.
+ *
+ * Nodes ported from gitlab.com/Linaro/arm64-laptops/linux @ 19e59e1b39ad
+ * (arch/arm64/boot/dts/qcom/x1e78100-lenovo-thinkpad-t14s.dtsi),
+ * Copyright (c) 2025, Linaro Limited.
+ *
+ * Mainline's x1e78100-lenovo-thinkpad-t14s.dtsi (as of 7.1.5) describes no
+ * part of the WCN7850. Bluetooth hangs off uart14 as a serdev, and uart14 is
+ * "disabled" in hamoa.dtsi, so no serdev is created, hci_uart/btqca never
+ * bind, and the kernel comes up with no HCI device at all (empty
+ * /sys/class/bluetooth, nothing in rfkill).
+ *
+ * This only affects the T14s, and only since we default to
+ * pkgs.linuxPackages_latest: the Linaro tree that pkgs.x1e80100-linux is built
+ * from carries these nodes, and mainline's Yoga Slim 7x DT has both the serial
+ * aliases and its own bluetooth node. Drop this overlay once mainline gains
+ * the T14s WCN7850 description.
+ *
+ * GPIO flag literals are used instead of <dt-bindings/gpio/gpio.h> to keep
+ * this file compilable without kernel include paths (GPIO_ACTIVE_HIGH = 0).
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "lenovo,thinkpad-t14s";
+};
+
+&{/} {
+	/*
+	 * Without this the whole overlay is inert: qcom_geni_serial refuses to
+	 * bind uart14 and no serdev — hence no HCI device — is ever created.
+	 *
+	 * Mainline's T14s tree has no /aliases node at all (neither the board
+	 * dtsi nor hamoa.dtsi define one; the only other UART, the uart21 debug
+	 * port, is left disabled). qcom_geni_serial_probe() then gets -ENODEV
+	 * from of_alias_get_id() for both "serial" and "hsuart", and
+	 * get_port_from_line() asks ida_alloc_range() to start allocating at
+	 * of_alias_get_highest_id("serial") + 1 — which is -ENODEV + 1 = -18,
+	 * and ida_alloc_range() rejects any negative min with -ENOSPC. Probe
+	 * dies with "Invalid line -19". Nothing about that start hint was
+	 * written for "this board declares no serial alias", so any such board
+	 * simply cannot use a non-console geni UART.
+	 *
+	 * Index 1 (not 0) matches both the Linaro tree and the Slim 7x, leaving
+	 * serial0 for the debug UART.
+	 *
+	 * Spelled as a literal path rather than the natural `serial1 = &uart14;`
+	 * on purpose: a path reference is resolved to a string by dtc at compile
+	 * time and cannot be fixed up across an overlay boundary the way a
+	 * phandle cell can, so the &-form fails to compile here. dtc emits a
+	 * cosmetic alias_paths warning because it cannot see the target node
+	 * from inside the overlay.
+	 */
+	aliases {
+		serial1 = "/soc@0/geniqup@ac0000/serial@a98000";
+	};
+
+	/*
+	 * The 3.3V supply switch on the mainboard. The two rails below it are
+	 * actually on the removable M.2 card rather than the mainboard, but
+	 * describing them as fixed regulators works because all the host has
+	 * to do is turn on the 3.3V feed. (Linaro carries the same TODO.)
+	 */
+	vreg_wcn_3p3: regulator-wcn-3p3 {
+		compatible = "regulator-fixed";
+
+		regulator-name = "VREG_WCN_3P3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+
+		gpio = <&tlmm 214 0>;
+		enable-active-high;
+
+		pinctrl-0 = <&wcn_sw_en>;
+		pinctrl-names = "default";
+
+		regulator-boot-on;
+
+		/*
+		 * Deviation from the Linaro tree, and load-bearing. There it is
+		 * boot-on only, and its wifi@0 node keeps a permanent consumer
+		 * on the PMU; we do not port that node, so this regulator's
+		 * use_count drops to zero whenever Bluetooth is powered down.
+		 * regulator_late_cleanup() exempts always-on regulators but not
+		 * boot-on ones, so without this the core would switch off 3.3V
+		 * to the M.2 card.
+		 */
+		regulator-always-on;
+	};
+
+	vreg_wcn_0p95: regulator-wcn-0p95 {
+		compatible = "regulator-fixed";
+
+		regulator-name = "VREG_WCN_0P95";
+		regulator-min-microvolt = <950000>;
+		regulator-max-microvolt = <950000>;
+
+		vin-supply = <&vreg_wcn_3p3>;
+	};
+
+	vreg_wcn_1p9: regulator-wcn-1p9 {
+		compatible = "regulator-fixed";
+
+		regulator-name = "VREG_WCN_1P9";
+		regulator-min-microvolt = <1900000>;
+		regulator-max-microvolt = <1900000>;
+
+		vin-supply = <&vreg_wcn_3p3>;
+	};
+
+	wcn7850-pmu {
+		compatible = "qcom,wcn7850-pmu";
+
+		vdd-supply = <&vreg_wcn_0p95>;
+		vddio-supply = <&vreg_l15b_1p8>;
+		vddaon-supply = <&vreg_wcn_0p95>;
+		vdddig-supply = <&vreg_wcn_0p95>;
+		vddrfa1p2-supply = <&vreg_wcn_1p9>;
+		vddrfa1p8-supply = <&vreg_wcn_1p9>;
+
+		wlan-enable-gpios = <&tlmm 117 0>;
+		bt-enable-gpios = <&tlmm 116 0>;
+
+		pinctrl-0 = <&wcn_wlan_bt_en>;
+		pinctrl-names = "default";
+
+		regulators {
+			vreg_pmu_rfa_cmn: ldo0 {
+				regulator-name = "vreg_pmu_rfa_cmn";
+			};
+
+			vreg_pmu_aon_0p59: ldo1 {
+				regulator-name = "vreg_pmu_aon_0p59";
+			};
+
+			vreg_pmu_wlcx_0p8: ldo2 {
+				regulator-name = "vreg_pmu_wlcx_0p8";
+			};
+
+			vreg_pmu_wlmx_0p85: ldo3 {
+				regulator-name = "vreg_pmu_wlmx_0p85";
+			};
+
+			vreg_pmu_btcmx_0p85: ldo4 {
+				regulator-name = "vreg_pmu_btcmx_0p85";
+			};
+
+			vreg_pmu_rfa_0p8: ldo5 {
+				regulator-name = "vreg_pmu_rfa_0p8";
+			};
+
+			vreg_pmu_rfa_1p2: ldo6 {
+				regulator-name = "vreg_pmu_rfa_1p2";
+			};
+
+			vreg_pmu_rfa_1p8: ldo7 {
+				regulator-name = "vreg_pmu_rfa_1p8";
+			};
+
+			vreg_pmu_pcie_0p9: ldo8 {
+				regulator-name = "vreg_pmu_pcie_0p9";
+			};
+
+			vreg_pmu_pcie_1p8: ldo9 {
+				regulator-name = "vreg_pmu_pcie_1p8";
+			};
+		};
+	};
+};
+
+&tlmm {
+	wcn_sw_en: wcn-sw-en-state {
+		pins = "gpio214";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	wcn_wlan_bt_en: wcn-wlan-bt-en-state {
+		pins = "gpio116", "gpio117";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+};
+
+&uart14 {
+	status = "okay";
+
+	bluetooth {
+		compatible = "qcom,wcn7850-bt";
+		max-speed = <3200000>;
+
+		vddaon-supply = <&vreg_pmu_aon_0p59>;
+		vddwlcx-supply = <&vreg_pmu_wlcx_0p8>;
+		vddwlmx-supply = <&vreg_pmu_wlmx_0p85>;
+		vddrfacmn-supply = <&vreg_pmu_rfa_cmn>;
+		vddrfa0p8-supply = <&vreg_pmu_rfa_0p8>;
+		vddrfa1p2-supply = <&vreg_pmu_rfa_1p2>;
+		vddrfa1p8-supply = <&vreg_pmu_rfa_1p8>;
+	};
+};
