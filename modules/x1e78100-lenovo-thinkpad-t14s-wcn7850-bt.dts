@@ -81,13 +81,14 @@
 		regulator-boot-on;
 
 		/*
-		 * Deviation from the Linaro tree, and load-bearing. There it is
-		 * boot-on only, and its wifi@0 node keeps a permanent consumer
-		 * on the PMU; we do not port that node, so this regulator's
-		 * use_count drops to zero whenever Bluetooth is powered down.
-		 * regulator_late_cleanup() exempts always-on regulators but not
-		 * boot-on ones, so without this the core would switch off 3.3V
-		 * to the M.2 card.
+		 * Deviation from the Linaro tree. There it is boot-on only, and
+		 * its wifi@0 node keeps a permanent consumer on the PMU. This
+		 * overlay originally did not port that node, so this regulator's
+		 * use_count dropped to zero whenever Bluetooth was powered down,
+		 * and regulator_late_cleanup() (which exempts always-on
+		 * regulators but not boot-on ones) switched off 3.3V to the M.2
+		 * card. wifi@0 is ported now (see &pcie4_port0); this stays as a
+		 * belt-and-braces guard.
 		 */
 		regulator-always-on;
 	};
@@ -169,6 +170,31 @@
 				regulator-name = "vreg_pmu_pcie_1p8";
 			};
 		};
+	};
+};
+
+/*
+ * Since 7.3, pwrseq-qcom-wcn drives wlan-enable low at probe (the GPIOD_ASIS
+ * workaround was dropped once qcom-pcie learned to handle link down). WLAN_EN
+ * is then only raised again when a consumer of the PMU's "wlan" target asks
+ * for it, and that consumer is pci-pwrctrl-pwrseq binding to this node.
+ * Without it the card loses power ~10 ms after pwrseq probes, the root port
+ * logs RxErr + Link Down, and recovery fails with -ENODEV: no wifi at all.
+ */
+&pcie4_port0 {
+	wifi@0 {
+		compatible = "pci17cb,1107";
+		reg = <0x10000 0x0 0x0 0x0 0x0>;
+
+		vddaon-supply = <&vreg_pmu_aon_0p59>;
+		vddwlcx-supply = <&vreg_pmu_wlcx_0p8>;
+		vddwlmx-supply = <&vreg_pmu_wlmx_0p85>;
+		vddrfacmn-supply = <&vreg_pmu_rfa_cmn>;
+		vddrfa0p8-supply = <&vreg_pmu_rfa_0p8>;
+		vddrfa1p2-supply = <&vreg_pmu_rfa_1p2>;
+		vddrfa1p8-supply = <&vreg_pmu_rfa_1p8>;
+		vddpcie0p9-supply = <&vreg_pmu_pcie_0p9>;
+		vddpcie1p8-supply = <&vreg_pmu_pcie_1p8>;
 	};
 };
 
